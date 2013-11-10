@@ -3,8 +3,10 @@
 require 'time'
 require 'delegate'
 require 'timeout'
+require 'csv'
 
 SECONDS_IN_HOUR = 3600
+TIME_FORMAT = "%Y-%m-%d %H:%M"
 THIRSTY_PROGRAMMER_PENALTY = 50
 COLD_COFFEE_PENALTY = 1
 DECISION_TIME = 2
@@ -56,10 +58,15 @@ class Predictor < Struct.new(:pipe)
   include Utils
 
   def set_current_state(coffee_history_item)
-    pipe.puts(coffee_history_item.time.strftime("%Y-%m-%d %H:%M"))
+    pipe.puts(coffee_history_item.time.strftime(TIME_FORMAT))
     coffee_history_item.each do |company_id, usage|
       pipe.puts(usage)
     end
+    pipe.flush
+  end
+
+  def send_initial_info(timestamps)
+    pipe.puts(timestamps)
     pipe.flush
   end
 
@@ -115,20 +122,40 @@ class CoffeeHistory < Struct.new(:coffee_history_items)
       yield item
     end
   end
+
+  def size
+    coffee_history_items.length
+  end
 end
 
 class Referee < Struct.new(:coffee_history, :coffee_arrivals)
   def score
+    results_history = []
     result = 0
 
     coffee_history.drop(1).each do |coffee_history_item|
       coffee_history_item.each do |company_id, usage|
         cups_arriving = coffee_arrivals.arrival(coffee_history_item.time, company_id)
-        result += single_score(usage, cups_arriving)
+        single_result = single_score(usage, cups_arriving)
+        result += single_result
+
+        results_history << {time: coffee_history_item.time, company_id: company_id,
+                            expected: usage, cups: cups_arriving,
+                            turn: single_result, result: result}
       end
     end
 
-    result
+    [results_history, result]
+  end
+
+
+  def write_results_history_to_file(filename , results_history)
+    CSV.open(filename, 'w') do |results_file|
+      results_file << ['time', 'company_id', 'actual_consumption', 'cups_delivered', 'turn_result', 'total_score']
+      results_history.each do |result|
+        results_file << [result[:time].strftime(TIME_FORMAT), result[:company_id], result[:expected], result[:cups], result[:turn], result[:result]]
+      end
+    end
   end
 
   private
@@ -139,6 +166,8 @@ class Referee < Struct.new(:coffee_history, :coffee_arrivals)
       COLD_COFFEE_PENALTY * (actual - expected)
     end
   end
+
+
 end
 
 coffee_history = read_coffee_history("test.data")
@@ -146,11 +175,11 @@ coffee_history = read_coffee_history("test.data")
 predictor = nil
 coffee_timeout do
   predictor = Predictor.new(IO.popen(ARGV[0], "r+"))
+  predictor.send_initial_info(coffee_history.size)
 end
 raise "Could not boot up predictor" unless predictor
 
 arrivals = CoffeeArrivals.new
-
 coffee_history.each do |coffee_history_item|
   begin
     coffee_timeout do
@@ -162,5 +191,9 @@ coffee_history.each do |coffee_history_item|
   end
 end
 
-p Referee.new(coffee_history, arrivals).score
+referee = Referee.new(coffee_history, arrivals)
+results_history, result = referee.score
+referee.write_results_history_to_file('results.csv', results_history)
+
+p result
 
