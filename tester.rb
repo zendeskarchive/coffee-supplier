@@ -2,10 +2,14 @@
 
 require 'time'
 require 'delegate'
+require 'timeout'
 
 SECONDS_IN_HOUR = 3600
 THIRSTY_PROGRAMMER_PENALTY = 50
 COLD_COFFEE_PENALTY = 1
+DECISION_TIME = 2
+
+class CoffeeTimeoutError < StandardError; end
 
 module Utils
   def lines_to_mapping(lines)
@@ -26,6 +30,12 @@ module Utils
       CoffeeHistoryItem.new(time, lines_to_mapping(history_item.drop(1)))
     end
     CoffeeHistory.new(items)
+  end
+
+  def coffee_timeout
+    Timeout::timeout(DECISION_TIME, CoffeeTimeoutError) do
+      yield
+    end
   end
 end
 include Utils
@@ -132,12 +142,24 @@ class Referee < Struct.new(:coffee_history, :coffee_arrivals)
 end
 
 coffee_history = read_coffee_history("test.data")
-predictor = Predictor.new(IO.popen(ARGV[0], "r+"))
+
+predictor = nil
+coffee_timeout do
+  predictor = Predictor.new(IO.popen(ARGV[0], "r+"))
+end
+raise "Could not boot up predictor" unless predictor
+
 arrivals = CoffeeArrivals.new
 
 coffee_history.each do |coffee_history_item|
-  predictor.set_current_state(coffee_history_item)
-  arrivals.add_disposition(coffee_history_item.time, predictor.get_dispositions)
+  begin
+    coffee_timeout do
+      predictor.set_current_state(coffee_history_item)
+      arrivals.add_disposition(coffee_history_item.time, predictor.get_dispositions)
+    end
+  rescue CoffeeTimeoutError
+    break
+  end
 end
 
 p Referee.new(coffee_history, arrivals).score
