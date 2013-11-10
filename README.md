@@ -1,5 +1,7 @@
 Map file format:
-First row contains the number of companies C. It's followed by C rows containing the distance between the coffee supplier and the company.
+First row contains the number of companies C. It's followed by C rows where the n-th row contains
+the distance between the coffee supplier and the company measured in hours (that means that coffee
+sent now will arrive this many hours later).
 
 Example file:
 ```
@@ -10,7 +12,10 @@ Example file:
 ```
 
 Historic data file format:
-First row contains a number of timestamps T for which the data will be provided. It is followed by T series of data, where the first row is a timestamp in "YYYY-MM-DD HH:mm" format and next C rows contain coffee consumption levels for the given timestamp (the n-th row contains consumption level for the n-th company).
+First row contains the number of timestamps T for which data will be provided. It is followed by T
+series of data, where the first row is a timestamp in "YYYY-MM-DD HH:mm" format and the next C rows contain
+coffee consumption levels (measured in cups of coffee) for the given timestamp (the n-th row contains
+the consumption level for the n-th company).
 
 Example file:
 ```
