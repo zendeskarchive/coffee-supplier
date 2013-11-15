@@ -66,6 +66,8 @@ class Predictor < Struct.new(:pipe)
   end
 
   def send_initial_info(timestamps)
+    pipe.puts(COMPANY_MAP.size)
+    (0...COMPANY_MAP.size).each { |company_id| pipe.puts( COMPANY_MAP.distance(company_id) ) }
     pipe.puts(timestamps)
     pipe.flush
   end

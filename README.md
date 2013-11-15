@@ -11,7 +11,7 @@ Example file:
 2
 ```
 
-Historic data file format:
+Historic data and test data file format:
 First row contains the number of timestamps T for which data will be provided. It is followed by T
 series of data, where the first row is a timestamp in "YYYY-MM-DD HH:mm" format and the next C rows contain
 coffee consumption levels (measured in cups of coffee) for the given timestamp (the n-th row contains
