@@ -7,7 +7,7 @@ require 'csv'
 
 SECONDS_IN_HOUR = 3600
 TIME_FORMAT = "%Y-%m-%d %H:%M"
-THIRSTY_PROGRAMMER_PENALTY = 50
+THIRSTY_PROGRAMMER_PENALTY = 5
 COLD_COFFEE_PENALTY = 1
 DECISION_TIME = 2
 
@@ -153,7 +153,7 @@ class Referee < Struct.new(:coffee_history, :coffee_arrivals)
 
   def write_results_history_to_file(filename , results_history)
     CSV.open(filename, 'w') do |results_file|
-      results_file << ['time', 'company_id', 'actual_consumption', 'cups_delivered', 'turn_result', 'total_score']
+      results_file << ['time', 'company_id', 'actual_consumption', 'cups_delivered', 'turn_penalty', 'total_penalty']
       results_history.each do |result|
         results_file << [result[:time].strftime(TIME_FORMAT), result[:company_id], result[:expected], result[:cups], result[:turn], result[:result]]
       end
